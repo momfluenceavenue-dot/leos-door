@@ -401,6 +401,19 @@ function App() {
     const pe = elements.create("payment");
     pe.mount(paymentDivRef.current);
     pe.on("ready", () => setPaymentElementReady(true));
+    pe.on("loaderror", (event) => {
+      setOrderError("Payment form failed to load: " + (event?.error?.message || "unknown reason"));
+      setOrderStatus("error");
+    });
+    const stuckTimer = setTimeout(() => {
+      setPaymentElementReady(ready => {
+        if (!ready) {
+          setOrderError("Payment form is taking too long to load. This can happen if a network/ad-blocker is blocking Stripe. Try a different network or browser.");
+          setOrderStatus("error");
+        }
+        return ready;
+      });
+    }, 8000);
     elementsRef.current = elements;
     setPaymentElement(pe);
   }, [clientSecret, step, paymentElement]);
