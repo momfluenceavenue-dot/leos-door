@@ -238,6 +238,7 @@ function App() {
   const [gelatoOrderId, setGelatoOrderId] = useState(null);
   const [digitalBookUrl, setDigitalBookUrl] = useState(null);
   const [doorOpened, setDoorOpened] = useState(false);
+  const [previewPage, setPreviewPage] = useState(0);
 
   const toggleRoom = (id) => {
     setSelectedRooms(prev =>
@@ -604,7 +605,7 @@ function App() {
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                 <MagicBtn onClick={() => setStep("rooms")} color="#555">← Back</MagicBtn>
-                <MagicBtn onClick={() => { setDoorOpened(false); setStep("review"); }} disabled={!power} color="#6C3483">
+                <MagicBtn onClick={() => { setDoorOpened(false); setPreviewPage(0); setStep("review"); }} disabled={!power} color="#6C3483">
                   Preview My Book! →
                 </MagicBtn>
               </div>
@@ -668,22 +669,83 @@ function App() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                {bookPreview.map((page, i) => (
-                  <div key={i} style={{
-                    background: `${page.room.color}22`,
-                    border: `1px solid ${page.room.color}55`,
-                    borderRadius: 14, padding: "14px 18px",
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ textAlign: "center", marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
+                    📖 Flip through a sneak peek
+                  </span>
+                </div>
+
+                <div key={previewPage} style={{
+                  display: "flex",
+                  minHeight: 220,
+                  borderRadius: 18,
+                  overflow: "hidden",
+                  border: `2px solid ${bookPreview[previewPage].room.color}88`,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                  animation: "pop 0.35s ease-out",
+                }}>
+                  {/* left page */}
+                  <div style={{
+                    flex: "0 0 38%",
+                    background: `linear-gradient(160deg, ${bookPreview[previewPage].room.color}55, ${bookPreview[previewPage].room.color}22)`,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "18px 10px",
+                    borderRight: "2px dashed rgba(255,255,255,0.15)",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                      <span style={{ fontSize: 22 }}>{page.room.emoji}</span>
-                      <span style={{ fontFamily: "'Fredoka One', cursive", fontSize: 15, color: "#fff" }}>
-                        Page {page.pageNum}: {page.room.label}
-                      </span>
+                    <div style={{ fontSize: 46 }}>{bookPreview[previewPage].room.emoji}</div>
+                    <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 13, color: "#fff", textAlign: "center", marginTop: 8 }}>
+                      {bookPreview[previewPage].room.label}
                     </div>
-                    <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>{page.text}</p>
                   </div>
-                ))}
+                  {/* right page */}
+                  <div style={{
+                    flex: 1,
+                    background: "rgba(255,255,255,0.06)",
+                    padding: "20px 18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}>
+                    <div style={{ fontFamily: "'Fredoka One', cursive", fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                      Page {bookPreview[previewPage].pageNum}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.9)", lineHeight: 1.55 }}>
+                      {bookPreview[previewPage].text}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginTop: 14 }}>
+                  <button
+                    onClick={() => setPreviewPage(p => Math.max(0, p - 1))}
+                    disabled={previewPage === 0}
+                    style={{
+                      background: "none", border: "none", cursor: previewPage === 0 ? "default" : "pointer",
+                      fontSize: 26, color: previewPage === 0 ? "rgba(255,255,255,0.2)" : "#D4A017",
+                    }}
+                  >←</button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {bookPreview.map((_, i) => (
+                      <div key={i} onClick={() => setPreviewPage(i)} style={{
+                        width: i === previewPage ? 20 : 8, height: 8, borderRadius: 6,
+                        background: i === previewPage ? "#D4A017" : "rgba(255,255,255,0.25)",
+                        cursor: "pointer", transition: "all 0.3s",
+                      }} />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setPreviewPage(p => Math.min(bookPreview.length - 1, p + 1))}
+                    disabled={previewPage === bookPreview.length - 1}
+                    style={{
+                      background: "none", border: "none", cursor: previewPage === bookPreview.length - 1 ? "default" : "pointer",
+                      fontSize: 26, color: previewPage === bookPreview.length - 1 ? "rgba(255,255,255,0.2)" : "#D4A017",
+                    }}
+                  >→</button>
+                </div>
               </div>
 
               {selectedPowerData && (
