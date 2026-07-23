@@ -13,6 +13,8 @@
     const panel = document.getElementById('status-panel');
     if (!panel) return; // body hasn't parsed yet — updateStatus() gets called again later
     const s = window.__loadStatus;
+    const anyFailed = Object.values(s).some(v => v === false);
+    if (!anyFailed) return; // silent while things are loading normally — nothing to show a customer
     const label = (name, val) => name + ': ' + (val === null ? 'loading...' : val ? '\u2705 loaded' : '\u274c FAILED');
     panel.innerHTML =
       label('React', s.react) + ' | ' +
@@ -20,21 +22,10 @@
       label('Babel', s.babel) + ' | ' +
       label('Stripe', s.stripe) + ' | ' +
       label('jsPDF', s.jspdf) +
-      '<br>If any say FAILED, screenshot this bar and send it over.';
-    const allChecked = Object.values(s).every(v => v !== null);
-    const anyFailed = Object.values(s).some(v => v === false);
-    if (allChecked && !anyFailed) {
-      panel.style.background = '#0a2a0a';
-      setTimeout(() => {
-        panel.style.display = 'none';
-        const root = document.getElementById('root');
-        if (root) root.style.paddingTop = '0';
-      }, 2000);
-    }
-    if (anyFailed) {
-      panel.style.background = '#3a0a0a';
-      panel.style.color = '#ff8888';
-    }
+      '<br>Something failed to load — screenshot this bar and send it over.';
+    panel.style.display = 'block';
+    panel.style.background = '#3a0a0a';
+    panel.style.color = '#ff8888';
   };
 </script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin onload="window.__loadStatus.react=true;window.__updateStatus()" onerror="window.__loadStatus.react=false;window.__updateStatus()"></script>
@@ -51,13 +42,27 @@
   @keyframes doorGlow { 0%,100% { box-shadow: 0 0 20px rgba(212,160,23,0.4); } 50% { box-shadow: 0 0 40px rgba(212,160,23,0.7); } }
   @keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   @keyframes confetti { 0% { transform: translateY(-10px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+  @keyframes flipNext {
+    0%   { transform: perspective(1200px) rotateY(0deg); }
+    50%  { transform: perspective(1200px) rotateY(-95deg); filter: brightness(0.7); }
+    51%  { filter: brightness(0.7); }
+    100% { transform: perspective(1200px) rotateY(0deg); filter: brightness(1); }
+  }
+  @keyframes flipPrev {
+    0%   { transform: perspective(1200px) rotateY(0deg); }
+    50%  { transform: perspective(1200px) rotateY(95deg); filter: brightness(0.7); }
+    51%  { filter: brightness(0.7); }
+    100% { transform: perspective(1200px) rotateY(0deg); filter: brightness(1); }
+  }
+  .book-spread { transform-style: preserve-3d; transform-origin: center; }
+  .book-spread.flip-next { animation: flipNext 0.55s ease-in-out; }
+  .book-spread.flip-prev { animation: flipPrev 0.55s ease-in-out; }
 </style>
 </head>
 <body>
-<div id="status-panel" style="position:fixed; top:0; left:0; right:0; background:#111; color:#0f0; font-family:monospace; font-size:12px; padding:10px 14px; z-index:99999; line-height:1.6;">
-  Checking libraries...
+<div id="status-panel" style="display:none; position:fixed; top:0; left:0; right:0; background:#111; color:#0f0; font-family:monospace; font-size:12px; padding:10px 14px; z-index:99999; line-height:1.6;">
 </div>
-<div id="root" style="padding-top:110px;"></div>
+<div id="root"></div>
 <div id="error-box" style="display:none; position:fixed; inset:0; background:#1a0a0a; color:#fff; font-family:monospace; padding:24px; z-index:9999; overflow:auto;"></div>
 
 <script>
@@ -239,6 +244,36 @@ function App() {
   const [digitalBookUrl, setDigitalBookUrl] = useState(null);
   const [doorOpened, setDoorOpened] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
+  const [flipDir, setFlipDir] = useState(null);
+
+  const playPageTurnSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const bufferSize = ctx.sampleRate * 0.25;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / bufferSize;
+        data[i] = (Math.random() * 2 - 1) * (1 - t) * 0.25;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "highpass";
+      filter.frequency.value = 800;
+      noise.connect(filter);
+      filter.connect(ctx.destination);
+      noise.start();
+    } catch (e) { /* sound is a nice-to-have, never block on it */ }
+  };
+
+  const goToPreviewPage = (newPage) => {
+    if (newPage < 0 || newPage >= bookPreview.length || newPage === previewPage) return;
+    setFlipDir(newPage > previewPage ? "next" : "prev");
+    playPageTurnSound();
+    setPreviewPage(newPage);
+    setTimeout(() => setFlipDir(null), 560);
+  };
 
   const toggleRoom = (id) => {
     setSelectedRooms(prev =>
@@ -676,15 +711,16 @@ function App() {
                   </span>
                 </div>
 
-                <div key={previewPage} style={{
-                  display: "flex",
-                  minHeight: 220,
-                  borderRadius: 18,
-                  overflow: "hidden",
-                  border: `2px solid ${bookPreview[previewPage].room.color}88`,
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-                  animation: "pop 0.35s ease-out",
-                }}>
+                <div
+                  className={`book-spread${flipDir === "next" ? " flip-next" : flipDir === "prev" ? " flip-prev" : ""}`}
+                  style={{
+                    display: "flex",
+                    minHeight: 220,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    border: `2px solid ${bookPreview[previewPage].room.color}88`,
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                  }}>
                   {/* left page */}
                   <div style={{
                     flex: "0 0 38%",
@@ -721,7 +757,7 @@ function App() {
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginTop: 14 }}>
                   <button
-                    onClick={() => setPreviewPage(p => Math.max(0, p - 1))}
+                    onClick={() => goToPreviewPage(previewPage - 1)}
                     disabled={previewPage === 0}
                     style={{
                       background: "none", border: "none", cursor: previewPage === 0 ? "default" : "pointer",
@@ -730,7 +766,7 @@ function App() {
                   >←</button>
                   <div style={{ display: "flex", gap: 6 }}>
                     {bookPreview.map((_, i) => (
-                      <div key={i} onClick={() => setPreviewPage(i)} style={{
+                      <div key={i} onClick={() => goToPreviewPage(i)} style={{
                         width: i === previewPage ? 20 : 8, height: 8, borderRadius: 6,
                         background: i === previewPage ? "#D4A017" : "rgba(255,255,255,0.25)",
                         cursor: "pointer", transition: "all 0.3s",
@@ -738,7 +774,7 @@ function App() {
                     ))}
                   </div>
                   <button
-                    onClick={() => setPreviewPage(p => Math.min(bookPreview.length - 1, p + 1))}
+                    onClick={() => goToPreviewPage(previewPage + 1)}
                     disabled={previewPage === bookPreview.length - 1}
                     style={{
                       background: "none", border: "none", cursor: previewPage === bookPreview.length - 1 ? "default" : "pointer",
