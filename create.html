@@ -299,23 +299,34 @@ function App() {
   const playDoorOpenSound = () => {
     try {
       const ctx = getAudioCtx();
-      const now = ctx.currentTime;
-      // a soft ascending magical chime, like light sparkling as the door opens
-      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        const gain = ctx.createGain();
-        const start = now + i * 0.09;
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.14, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(start);
-        osc.stop(start + 0.55);
-      });
+      const fireChime = () => {
+        const now = ctx.currentTime;
+        // a soft ascending magical chime, like light sparkling as the door opens
+        const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          const gain = ctx.createGain();
+          const start = now + i * 0.09;
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.14, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.55);
+        });
+      };
+      // On the very first sound of the session, the context may still be
+      // "waking up" — wait for resume() to actually finish before scheduling
+      // notes, otherwise they can get scheduled against a stale clock and
+      // never audibly play.
+      if (ctx.state !== "running") {
+        ctx.resume().then(fireChime).catch(() => {});
+      } else {
+        fireChime();
+      }
     } catch (e) { /* sound is a nice-to-have, never block on it */ }
   };
 
