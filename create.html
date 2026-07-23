@@ -261,13 +261,15 @@ function App() {
     try {
       const ctx = getAudioCtx();
 
-      const duration = 0.16;
+      const duration = 0.22;
       const bufferSize = Math.floor(ctx.sampleRate * duration);
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
         const t = i / bufferSize;
-        const envelope = Math.pow(1 - t, 2.5); // quick soft decay, no lingering hiss
+        const attack = Math.min(1, t / 0.22); // soft fade-in, no instant "smack"
+        const decay = Math.pow(1 - t, 1.7);
+        const envelope = attack * decay;
         data[i] = (Math.random() * 2 - 1) * envelope;
       }
       const noise = ctx.createBufferSource();
@@ -276,14 +278,14 @@ function App() {
       // band-limit the noise so it sounds like a soft paper rustle, not static/spray
       const highpass = ctx.createBiquadFilter();
       highpass.type = "highpass";
-      highpass.frequency.value = 1000;
+      highpass.frequency.value = 900;
       const lowpass = ctx.createBiquadFilter();
       lowpass.type = "lowpass";
-      lowpass.frequency.value = 3500;
+      lowpass.frequency.value = 3000;
       lowpass.Q.value = 0.4;
 
       const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.22; // audible but still soft
+      gainNode.gain.value = 0.16; // graceful, not a smack
 
       noise.connect(highpass);
       highpass.connect(lowpass);
