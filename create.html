@@ -246,11 +246,23 @@ function App() {
   const [previewPage, setPreviewPage] = useState(0);
   const [flipDir, setFlipDir] = useState(null);
 
+  const audioCtxRef = useRef(null);
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  };
+
   const playPageTurnSound = () => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getAudioCtx();
+
       const duration = 0.16;
-      const bufferSize = ctx.sampleRate * duration;
+      const bufferSize = Math.floor(ctx.sampleRate * duration);
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
@@ -264,20 +276,46 @@ function App() {
       // band-limit the noise so it sounds like a soft paper rustle, not static/spray
       const highpass = ctx.createBiquadFilter();
       highpass.type = "highpass";
-      highpass.frequency.value = 1200;
+      highpass.frequency.value = 1000;
       const lowpass = ctx.createBiquadFilter();
       lowpass.type = "lowpass";
-      lowpass.frequency.value = 3000;
+      lowpass.frequency.value = 3500;
       lowpass.Q.value = 0.4;
 
       const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.08; // much quieter overall
+      gainNode.gain.value = 0.22; // audible but still soft
+
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.22; // audible but still soft
 
       noise.connect(highpass);
       highpass.connect(lowpass);
       lowpass.connect(gainNode);
       gainNode.connect(ctx.destination);
       noise.start();
+    } catch (e) { /* sound is a nice-to-have, never block on it */ }
+  };
+
+  const playDoorOpenSound = () => {
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      // a soft ascending magical chime, like light sparkling as the door opens
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const gain = ctx.createGain();
+        const start = now + i * 0.09;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.14, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.55);
+      });
     } catch (e) { /* sound is a nice-to-have, never block on it */ }
   };
 
@@ -669,7 +707,7 @@ function App() {
                 {name}'s book is ready...
               </p>
               <button
-                onClick={() => { launchConfetti(); setDoorOpened(true); }}
+                onClick={() => { launchConfetti(); playDoorOpenSound(); setDoorOpened(true); }}
                 style={{
                   background: "transparent", border: "none", cursor: "pointer",
                   fontSize: 140, animation: "doorGlow 1.6s ease-in-out infinite, float 3s ease-in-out infinite",
