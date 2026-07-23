@@ -387,6 +387,8 @@ function App() {
   }, [step]);
 
   // Mount the Stripe Payment Element once we have a clientSecret and the div is ready
+  const [paymentElementReady, setPaymentElementReady] = useState(false);
+
   useEffect(() => {
     if (step !== "checkout" || !clientSecret || !paymentDivRef.current || paymentElement) return;
     const stripe = getStripe();
@@ -398,6 +400,7 @@ function App() {
     const elements = stripe.elements({ clientSecret });
     const pe = elements.create("payment");
     pe.mount(paymentDivRef.current);
+    pe.on("ready", () => setPaymentElementReady(true));
     elementsRef.current = elements;
     setPaymentElement(pe);
   }, [clientSecret, step, paymentElement]);
@@ -926,7 +929,7 @@ function App() {
                 <div style={{ fontFamily: "'Fredoka One', cursive", color: "#D4A017", fontSize: 14, marginBottom: 10 }}>
                   PAYMENT
                 </div>
-                {!clientSecret && (
+                {!paymentElementReady && (
                   <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>Loading payment form...</p>
                 )}
                 <div ref={paymentDivRef}></div>
@@ -942,8 +945,8 @@ function App() {
               )}
 
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-                <MagicBtn onClick={() => { setPaymentElement(null); elementsRef.current = null; setStep("review"); }} color="#555">← Back</MagicBtn>
-                <MagicBtn onClick={handlePay} big color="#D4A017" disabled={!clientSecret || orderStatus === "processing"}>
+                <MagicBtn onClick={() => { setPaymentElement(null); setPaymentElementReady(false); elementsRef.current = null; setStep("review"); }} color="#555">← Back</MagicBtn>
+                <MagicBtn onClick={handlePay} big color="#D4A017" disabled={!clientSecret || !paymentElementReady || orderStatus === "processing"}>
                   {orderStatus === "processing" ? "Processing..." : `Pay ${CONFIG.PRICE_DISPLAY}`}
                 </MagicBtn>
               </div>
