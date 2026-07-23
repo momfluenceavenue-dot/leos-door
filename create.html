@@ -285,9 +285,6 @@ function App() {
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.22; // audible but still soft
 
-      const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.22; // audible but still soft
-
       noise.connect(highpass);
       highpass.connect(lowpass);
       lowpass.connect(gainNode);
