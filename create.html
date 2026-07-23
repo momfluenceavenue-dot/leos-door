@@ -388,7 +388,7 @@ function App() {
 
   // Mount the Stripe Payment Element once we have a clientSecret and the div is ready
   useEffect(() => {
-    if (!clientSecret || !paymentDivRef.current || paymentElement) return;
+    if (step !== "checkout" || !clientSecret || !paymentDivRef.current || paymentElement) return;
     const stripe = getStripe();
     if (!stripe) {
       // Stripe.js hasn't finished loading yet — try again shortly
@@ -400,7 +400,7 @@ function App() {
     pe.mount(paymentDivRef.current);
     elementsRef.current = elements;
     setPaymentElement(pe);
-  }, [clientSecret]);
+  }, [clientSecret, step, paymentElement]);
 
   // Build a simple print-ready PDF from the same content shown in the preview
   const generateBookPdf = () => {
@@ -942,7 +942,7 @@ function App() {
               )}
 
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-                <MagicBtn onClick={() => setStep("review")} color="#555">← Back</MagicBtn>
+                <MagicBtn onClick={() => { setPaymentElement(null); elementsRef.current = null; setStep("review"); }} color="#555">← Back</MagicBtn>
                 <MagicBtn onClick={handlePay} big color="#D4A017" disabled={!clientSecret || orderStatus === "processing"}>
                   {orderStatus === "processing" ? "Processing..." : `Pay ${CONFIG.PRICE_DISPLAY}`}
                 </MagicBtn>
