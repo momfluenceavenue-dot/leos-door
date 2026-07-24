@@ -154,6 +154,44 @@ const ROOM_TEXT = {
   brazil: (n) => `A toucan with a rainbow beak lands on ${n}'s shoulder and off they fly!`,
 };
 
+// A second story beat for each world, giving every chosen world a fuller
+// two-part scene instead of just one line.
+const ROOM_TEXT_2 = {
+  jungle: (n) => `The tigers show ${n} a secret waterfall hidden behind the vines. "Come back anytime," they seem to say, before ${n} waves goodbye and the leaves rustle closed.`,
+  undersea: (n) => `A gentle dolphin swims a full circle around ${n}, clicking happily. Together they explore a sunken ship glowing with tiny lights before it's time to swim back up.`,
+  carnival: (n) => `The ringmaster hands ${n} a golden ticket good for one more ride, any ride at all. ${n} picks the biggest roller coaster and laughs the whole way down.`,
+  space: (n) => `The alien family invites ${n} aboard their spaceship for a snack of starlight jelly. They point out ${n}'s home planet, glowing tiny and blue in the distance.`,
+  kingdom: (n) => `The bravest knight kneels and taps ${n}'s shoulder with a sword. "Rise, brave one," they say, and the whole castle cheers ${n}'s name.`,
+  rainforest: (n) => `A hummingbird hovers close and hums a tiny tune just for ${n}. The rain slows to a sparkle, and every flower seems to glow a little brighter.`,
+  princess: (n) => `The rose towers open their doors just for ${n}, revealing a ballroom lit by a thousand fireflies. ${n} takes one slow spin beneath the stars.`,
+  candy: (n) => `A gumdrop mountain rises ahead, and ${n} slides all the way down into a lake of warm cocoa. Everyone in Candy Wonderland claps and cheers.`,
+  toys: (n) => `The teddy bears build ${n} a blanket fort taller than the toy shelf itself. Inside, every toy tells ${n} their favorite story from years gone by.`,
+  japan: (n) => `The red fox leads ${n} down a quiet path lined with paper lanterns. At the end waits a tiny shrine, glowing warm just as the sun begins to set.`,
+  paris: (n) => `The little mouse invites ${n} up to the very top of the tower for the best view in the whole city. Together they watch the lights of Paris blink on, one by one.`,
+  africa: (n) => `The lion cub falls asleep curled up in ${n}'s lap while the elephants stand watch nearby. The golden grass sways gently in the warm evening breeze.`,
+  india: (n) => `The baby elephant carries ${n} straight into the middle of the festival, where fireworks bloom overhead in every color ${n} can imagine.`,
+  brazil: (n) => `The toucan flies ${n} high above the treetops, past pink dolphins leaping in the river below, all the way to a hidden waterfall glowing gold in the sun.`,
+};
+
+// A short "Leo's Tip" reflection line for each world, giving kids something
+// to think about or talk about after each adventure.
+const ROOM_TIP = {
+  jungle: (n) => `Leo's Tip: Being brave doesn't mean you're never scared — it means you leap anyway, ${n}.`,
+  undersea: (n) => `Leo's Tip: The ocean is big, but so is your imagination, ${n}. What will you build next?`,
+  carnival: (n) => `Leo's Tip: It's okay to laugh as loud as you want, ${n}. Joy is meant to be shared.`,
+  space: (n) => `Leo's Tip: Even the biggest galaxy has room for someone as brave as you, ${n}.`,
+  kingdom: (n) => `Leo's Tip: A true hero is kind first, and brave second, ${n}.`,
+  rainforest: (n) => `Leo's Tip: Slow down sometimes, ${n} — the quietest moments are often the most magical.`,
+  princess: (n) => `Leo's Tip: You don't need a crown to be worthy of one, ${n}. You already are.`,
+  candy: (n) => `Leo's Tip: Sweetness looks good on you, ${n} — inside and out.`,
+  toys: (n) => `Leo's Tip: Every toy (and every person) has a story worth listening to, ${n}.`,
+  japan: (n) => `Leo's Tip: Beauty is often found in quiet, small moments, ${n}.`,
+  paris: (n) => `Leo's Tip: The world is enormous, ${n}, and you're going to see so much of it.`,
+  africa: (n) => `Leo's Tip: Gentle and brave can live in the same heart, ${n}.`,
+  india: (n) => `Leo's Tip: Celebrate loudly and often, ${n} — you deserve it.`,
+  brazil: (n) => `Leo's Tip: Adventure is often just one wingbeat away, ${n}.`,
+};
+
 const starField = Array.from({ length: 40 }, (_, i) => ({
   id: i, x: Math.random() * 100, y: Math.random() * 100,
   size: Math.random() * 3 + 1, delay: Math.random() * 3,
@@ -422,65 +460,143 @@ function App() {
   }, [clientSecret, step, paymentElement]);
 
   // Build a simple print-ready PDF from the same content shown in the preview
-  const generateBookPdf = () => {
+  const ILLUSTRATION_FILES = {
+    door: "illustrations/door.jpg",
+    jungle: "illustrations/jungle.jpg",
+    undersea: "illustrations/sea.jpg",
+    carnival: "illustrations/carnival.jpg",
+    space: "illustrations/space.jpg",
+    kingdom: "illustrations/kingdom.jpg",
+    rainforest: "illustrations/rainforest.jpg",
+    lastpage: "illustrations/lastpage.jpg",
+  };
+
+  const loadImageAsDataURL = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("missing image: " + url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const drawTextPage = (doc, title, bodyText) => {
+    doc.addPage([420, 420]);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, 420, 420, "F");
+    doc.setTextColor(40, 30, 20);
+    if (title) {
+      doc.setFontSize(16);
+      doc.text(title, 210, 60, { align: "center" });
+    }
+    doc.setFontSize(13);
+    const lines = doc.splitTextToSize(bodyText, 340);
+    doc.text(lines, 210, title ? 120 : 200, { align: "center" });
+  };
+
+  const generateBookPdf = async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: [420, 420] });
 
-    doc.setFillColor(26, 10, 46);
-    doc.rect(0, 0, 420, 420, "F");
+    // Title page — real door illustration as the backdrop if available
+    try {
+      const doorImg = await loadImageAsDataURL(ILLUSTRATION_FILES.door);
+      doc.addImage(doorImg, "JPEG", 0, 0, 420, 420);
+      doc.setFillColor(0, 0, 0);
+      doc.setGState ? doc.setGState(new doc.GState({ opacity: 0.35 })) : null;
+      doc.rect(0, 280, 420, 140, "F");
+      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
+    } catch (e) {
+      doc.setFillColor(26, 10, 46);
+      doc.rect(0, 0, 420, 420, "F");
+    }
     doc.setTextColor(212, 160, 23);
-    doc.setFontSize(32);
-    doc.text(`${name}'s Door`, 210, 180, { align: "center" });
+    doc.setFontSize(30);
+    doc.text(`${name}'s Door`, 210, 330, { align: "center" });
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
-    doc.text("A magical adventure starring", 210, 220, { align: "center" });
-    doc.text(name, 210, 240, { align: "center" });
+    doc.setFontSize(13);
+    doc.text("A magical adventure starring " + name, 210, 365, { align: "center" });
 
-    bookPreview.forEach((page) => {
+    for (const page of bookPreview) {
+      // Beat 1: arrival — real illustration first, so the art leads each world
       doc.addPage([420, 420]);
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, 420, 420, "F");
-      doc.setTextColor(40, 30, 20);
-      doc.setFontSize(16);
-      doc.text(page.room.label, 210, 60, { align: "center" });
-      doc.setFontSize(13);
-      const lines = doc.splitTextToSize(page.text, 340);
-      doc.text(lines, 210, 120, { align: "center" });
+      const illustrationPath = ILLUSTRATION_FILES[page.room.id];
+      let hasArt = false;
+      if (illustrationPath) {
+        try {
+          const img = await loadImageAsDataURL(illustrationPath);
+          doc.addImage(img, "JPEG", 0, 0, 420, 420);
+          hasArt = true;
+        } catch (e) { hasArt = false; }
+      }
+      if (!hasArt) {
+        doc.setFillColor(...hexToRgb(page.room.color));
+        doc.rect(0, 0, 420, 420, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(48);
+        doc.text(page.room.emoji || "*", 210, 220, { align: "center" });
+      }
 
-      // a second, mostly-blank page per world gives kids a place for the
-      // "illustration" feel and helps reach the print minimum naturally
-      doc.addPage([420, 420]);
-      doc.setFillColor(...hexToRgb(page.room.color));
-      doc.rect(0, 0, 420, 420, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(48);
-      doc.text(page.room.emoji || "*", 210, 220, { align: "center" });
-    });
+      // Beat 2: the main story moment
+      drawTextPage(doc, page.room.label, page.text);
 
-    if (selectedPowerData) {
-      doc.addPage([420, 420]);
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, 420, 420, "F");
-      doc.setTextColor(40, 30, 20);
-      doc.setFontSize(16);
-      doc.text(`${name}'s Superpower`, 210, 180, { align: "center" });
-      doc.setFontSize(14);
-      doc.text(selectedPowerData.label, 210, 210, { align: "center" });
+      // Beat 3: the continuing scene — gives every world a fuller arc
+      drawTextPage(doc, null, page.text2);
     }
 
-    // Gelato's photobook minimum is 30 pages — pad with simple closing
-    // pages if the personalized content didn't reach that on its own.
-    // This specific Gelato product requires EXACTLY 33 pages (not just a minimum)
-    // This product's page count likely needs to be an EVEN number — 34 is
-    // even, within the 30-200 range, and closest to what Gelato requested.
-    const GELATO_REQUIRED_PAGES = 34;
-    while (doc.internal.getNumberOfPages() < GELATO_REQUIRED_PAGES) {
-      doc.addPage([420, 420]);
+    if (selectedPowerData) {
+      drawTextPage(doc, `${name}'s Superpower`, selectedPowerData.label);
+    }
+
+    // Closing illustrated page — the real "coming home" artwork
+    doc.addPage([420, 420]);
+    try {
+      const lastImg = await loadImageAsDataURL(ILLUSTRATION_FILES.lastpage);
+      doc.addImage(lastImg, "JPEG", 0, 0, 420, 420);
+    } catch (e) {
       doc.setFillColor(26, 10, 46);
       doc.rect(0, 0, 420, 420, "F");
       doc.setTextColor(212, 160, 23);
       doc.setFontSize(20);
       doc.text("The End", 210, 210, { align: "center" });
+    }
+
+    // A personalized closing sequence — real, meaningful pages instead of
+    // blank filler, cycling through if more pages are still needed to reach
+    // this Gelato product's required page count.
+    const closingPages = [
+      () => drawTextPage(
+        doc,
+        "Certificate of Imagination",
+        `This certifies that ${name} is officially brave, kind, and full of magic.\n\nAwarded for adventuring through ${bookPreview.length} whole worlds without ever losing their sense of wonder.`
+      ),
+      () => drawTextPage(
+        doc,
+        "Leo's Tip",
+        bookPreview.length ? bookPreview[bookPreview.length - 1].tip : `Keep imagining, ${name}.`
+      ),
+      () => drawTextPage(
+        doc,
+        "Draw Your Own Door",
+        `${name}, what does YOUR door look like? Grab a crayon and draw it right here — every door leads somewhere new.`
+      ),
+      () => drawTextPage(
+        doc,
+        "About Leo's Door",
+        `Leo's Door was written for every child whose imagination is bigger than any room they're in.\n\nYou are brave. You are powerful. You are free.`
+      ),
+    ];
+
+    // This specific Gelato product requires an EVEN page count within its
+    // 30-200 range — 34 is confirmed valid for this product.
+    const GELATO_REQUIRED_PAGES = 34;
+    let closingIndex = 0;
+    while (doc.internal.getNumberOfPages() < GELATO_REQUIRED_PAGES) {
+      closingPages[closingIndex % closingPages.length]();
+      closingIndex++;
     }
 
     const finalPageCount = doc.internal.getNumberOfPages();
@@ -532,7 +648,7 @@ function App() {
       }
 
       // 2. Generate the personalized book PDF
-      const { blob: pdfBlob, pageCount } = generateBookPdf();
+      const { blob: pdfBlob, pageCount } = await generateBookPdf();
       const formData = new FormData();
       formData.append("file", pdfBlob, `${name}-door.pdf`);
 
@@ -578,6 +694,8 @@ function App() {
   const bookPreview = selectedRoomData.map((room, i) => ({
     room,
     text: (ROOM_TEXT[room.id] ? ROOM_TEXT[room.id](name) : `${name} discovers something magical here!`),
+    text2: (ROOM_TEXT_2[room.id] ? ROOM_TEXT_2[room.id](name) : `${name} never wants this moment to end.`),
+    tip: (ROOM_TIP[room.id] ? ROOM_TIP[room.id](name) : `Leo's Tip: Keep imagining, ${name}.`),
     pageNum: i + 1,
   }));
 
@@ -694,7 +812,7 @@ function App() {
                   Pick Your Magical Rooms!
                 </h2>
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, margin: 0 }}>
-                  Choose up to <strong style={{ color: "#D4A017" }}>6 worlds</strong> for your book — {selectedRooms.length}/6 chosen
+                  Choose <strong style={{ color: "#D4A017" }}>4-6 worlds</strong> for your book — {selectedRooms.length}/6 chosen
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginBottom: 24 }}>
@@ -719,7 +837,7 @@ function App() {
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                 <MagicBtn onClick={() => setStep("name")} color="#555">← Back</MagicBtn>
-                <MagicBtn onClick={() => setStep("power")} disabled={selectedRooms.length < 1}>
+                <MagicBtn onClick={() => setStep("power")} disabled={selectedRooms.length < 4}>
                   Next: Choose Your Power! →
                 </MagicBtn>
               </div>
