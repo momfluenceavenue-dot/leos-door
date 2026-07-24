@@ -470,8 +470,9 @@ function App() {
 
     // Gelato's photobook minimum is 30 pages — pad with simple closing
     // pages if the personalized content didn't reach that on its own.
-    const GELATO_MIN_PAGES = 30;
-    while (doc.internal.getNumberOfPages() < GELATO_MIN_PAGES) {
+    // This specific Gelato product requires EXACTLY 33 pages (not just a minimum)
+    const GELATO_REQUIRED_PAGES = 33;
+    while (doc.internal.getNumberOfPages() < GELATO_REQUIRED_PAGES) {
       doc.addPage([420, 420]);
       doc.setFillColor(26, 10, 46);
       doc.rect(0, 0, 420, 420, "F");
