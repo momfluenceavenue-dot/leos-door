@@ -240,6 +240,7 @@ function App() {
   const paymentDivRef = useRef(null);
   const [orderStatus, setOrderStatus] = useState("idle"); // idle | processing | error
   const [orderError, setOrderError] = useState("");
+  const [clientSecretDebug, setClientSecretDebug] = useState("");
   const [gelatoOrderId, setGelatoOrderId] = useState(null);
   const [digitalBookUrl, setDigitalBookUrl] = useState(null);
   const [doorOpened, setDoorOpened] = useState(false);
@@ -362,9 +363,10 @@ function App() {
   useEffect(() => {
     if (step !== "checkout" || clientSecret) return;
 
-    fetch(`${CONFIG.BACKEND_URL}/create-payment-intent`, {
+    fetch(`${CONFIG.BACKEND_URL}/create-payment-intent?_=${Date.now()}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
       body: JSON.stringify({
         amount: CONFIG.PRICE_CENTS,
         currency: "usd",
@@ -375,6 +377,7 @@ function App() {
       .then(data => {
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
+          setClientSecretDebug(data.clientSecret.slice(0, 25));
         } else {
           setOrderError(data.error || "Could not start payment.");
           setOrderStatus("error");
@@ -942,6 +945,11 @@ function App() {
                 <div style={{ fontFamily: "'Fredoka One', cursive", color: "#D4A017", fontSize: 14, marginBottom: 10 }}>
                   PAYMENT
                 </div>
+                {clientSecretDebug && (
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, wordBreak: "break-all" }}>
+                    debug: {clientSecretDebug}
+                  </p>
+                )}
                 {!paymentElementReady && (
                   <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>Loading payment form...</p>
                 )}
