@@ -446,6 +446,15 @@ function App() {
       doc.setFontSize(13);
       const lines = doc.splitTextToSize(page.text, 340);
       doc.text(lines, 210, 120, { align: "center" });
+
+      // a second, mostly-blank page per world gives kids a place for the
+      // "illustration" feel and helps reach the print minimum naturally
+      doc.addPage([420, 420]);
+      doc.setFillColor(...hexToRgb(page.room.color));
+      doc.rect(0, 0, 420, 420, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(48);
+      doc.text(page.room.emoji || "*", 210, 220, { align: "center" });
     });
 
     if (selectedPowerData) {
@@ -459,7 +468,26 @@ function App() {
       doc.text(selectedPowerData.label, 210, 210, { align: "center" });
     }
 
-    return doc.output("blob");
+    // Gelato's photobook minimum is 30 pages — pad with simple closing
+    // pages if the personalized content didn't reach that on its own.
+    const GELATO_MIN_PAGES = 30;
+    while (doc.internal.getNumberOfPages() < GELATO_MIN_PAGES) {
+      doc.addPage([420, 420]);
+      doc.setFillColor(26, 10, 46);
+      doc.rect(0, 0, 420, 420, "F");
+      doc.setTextColor(212, 160, 23);
+      doc.setFontSize(20);
+      doc.text("The End", 210, 210, { align: "center" });
+    }
+
+    const finalPageCount = doc.internal.getNumberOfPages();
+    return { blob: doc.output("blob"), pageCount: finalPageCount };
+  };
+
+  const hexToRgb = (hex) => {
+    const clean = (hex || "#6C3483").replace("#", "");
+    const bigint = parseInt(clean, 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
   };
 
   const handlePay = async () => {
@@ -501,7 +529,7 @@ function App() {
       }
 
       // 2. Generate the personalized book PDF
-      const pdfBlob = generateBookPdf();
+      const { blob: pdfBlob, pageCount } = generateBookPdf();
       const formData = new FormData();
       formData.append("file", pdfBlob, `${name}-door.pdf`);
 
@@ -524,6 +552,7 @@ function App() {
           rooms: selectedRooms,
           power: selectedPowerData ? selectedPowerData.label : "",
           pdfUrl: uploadData.pdfUrl,
+          pageCount: pageCount,
           shippingAddress: shipping,
         }),
       });
