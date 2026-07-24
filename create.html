@@ -959,8 +959,9 @@ function App() {
                 <input placeholder="City" value={shipping.city}
                   onChange={e => setShipping({ ...shipping, city: e.target.value })}
                   style={inputStyle} />
-                <input placeholder="State" value={shipping.state}
-                  onChange={e => setShipping({ ...shipping, state: e.target.value })}
+                <input placeholder="State (e.g. NY)" value={shipping.state}
+                  maxLength={2}
+                  onChange={e => setShipping({ ...shipping, state: e.target.value.toUpperCase() })}
                   style={inputStyle} />
                 <input placeholder="ZIP" value={shipping.postCode}
                   onChange={e => setShipping({ ...shipping, postCode: e.target.value })}
