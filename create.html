@@ -135,7 +135,7 @@ const POWERS = [
   { id: "magic", label: "Cast any spell", emoji: "🪄", color: "#4A148C" },
 ];
 
-const STEPS = ["welcome", "name", "rooms", "power", "review", "checkout", "done"];
+const STEPS = ["welcome", "name", "character", "rooms", "power", "review", "checkout", "done"];
 
 const ROOM_TEXT = {
   jungle: (n) => `${n} leaps from tree to tree! Tigers run alongside, roaring with joy.`,
@@ -263,6 +263,7 @@ function Card({ children, glow }) {
 function App() {
   const [step, setStep] = useState("welcome");
   const [name, setName] = useState("");
+  const [character, setCharacter] = useState(null);
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [power, setPower] = useState(null);
   const [confetti, setConfetti] = useState([]);
@@ -461,14 +462,28 @@ function App() {
 
   // Build a simple print-ready PDF from the same content shown in the preview
   const ILLUSTRATION_FILES = {
-    door: "illustrations/door.jpg",
-    jungle: "illustrations/jungle.jpg",
-    undersea: "illustrations/sea.jpg",
-    carnival: "illustrations/carnival.jpg",
-    space: "illustrations/space.jpg",
-    kingdom: "illustrations/kingdom.jpg",
-    rainforest: "illustrations/rainforest.jpg",
-    lastpage: "illustrations/lastpage.jpg",
+    boy: {
+      door: "illustrations/door.jpg",
+      jungle: "illustrations/jungle.jpg",
+      undersea: "illustrations/sea.jpg",
+      carnival: "illustrations/carnival.jpg",
+      space: "illustrations/space.jpg",
+      kingdom: "illustrations/kingdom.jpg",
+      rainforest: "illustrations/rainforest.jpg",
+      lastpage: "illustrations/lastpage.jpg",
+    },
+    girl: {
+      door: "illustrations/girl-door.jpg",
+      jungle: "illustrations/girl-jungle.jpg",
+      // remaining worlds not yet illustrated for the girl character —
+      // automatically falls back to the boy version below rather than
+      // showing a blank color block
+    },
+  };
+
+  const getIllustrationPath = (char, roomId) => {
+    const set = ILLUSTRATION_FILES[char] || ILLUSTRATION_FILES.boy;
+    return set[roomId] || ILLUSTRATION_FILES.boy[roomId] || null;
   };
 
   const loadImageAsDataURL = async (url) => {
@@ -503,7 +518,7 @@ function App() {
 
     // Title page — real door illustration as the backdrop if available
     try {
-      const doorImg = await loadImageAsDataURL(ILLUSTRATION_FILES.door);
+      const doorImg = await loadImageAsDataURL(getIllustrationPath(character, "door"));
       doc.addImage(doorImg, "JPEG", 0, 0, 420, 420);
       doc.setFillColor(0, 0, 0);
       doc.setGState ? doc.setGState(new doc.GState({ opacity: 0.35 })) : null;
@@ -523,7 +538,7 @@ function App() {
     for (const page of bookPreview) {
       // Beat 1: arrival — real illustration first, so the art leads each world
       doc.addPage([420, 420]);
-      const illustrationPath = ILLUSTRATION_FILES[page.room.id];
+      const illustrationPath = getIllustrationPath(character, page.room.id);
       let hasArt = false;
       if (illustrationPath) {
         try {
@@ -554,7 +569,7 @@ function App() {
     // Closing illustrated page — the real "coming home" artwork
     doc.addPage([420, 420]);
     try {
-      const lastImg = await loadImageAsDataURL(ILLUSTRATION_FILES.lastpage);
+      const lastImg = await loadImageAsDataURL(getIllustrationPath(character, "lastpage"));
       doc.addImage(lastImg, "JPEG", 0, 0, 420, 420);
     } catch (e) {
       doc.setFillColor(26, 10, 46);
@@ -795,7 +810,49 @@ function App() {
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                 <MagicBtn onClick={() => setStep("welcome")} color="#555">← Back</MagicBtn>
-                <MagicBtn onClick={() => setStep("rooms")} disabled={name.trim().length < 2}>
+                <MagicBtn onClick={() => setStep("character")} disabled={name.trim().length < 2}>
+                  Next: Pick a Character →
+                </MagicBtn>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {step === "character" && (
+          <div style={{ animation: "pop 0.4s ease-out" }}>
+            <Card>
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 52 }}>🧑</div>
+                <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 28, color: "#D4A017", margin: "8px 0" }}>
+                  Choose Your Character
+                </h2>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, margin: 0 }}>
+                  Who will {name || "your child"} be in the story?
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 28 }}>
+                {[
+                  { id: "boy", label: "Boy", emoji: "👦" },
+                  { id: "girl", label: "Girl", emoji: "👧" },
+                ].map(opt => (
+                  <button key={opt.id} onClick={() => setCharacter(opt.id)} style={{
+                    flex: 1, maxWidth: 160,
+                    background: character === opt.id ? "rgba(212,160,23,0.25)" : "rgba(255,255,255,0.05)",
+                    border: character === opt.id ? "3px solid #D4A017" : "2px solid rgba(255,255,255,0.15)",
+                    borderRadius: 20, padding: "24px 12px", cursor: "pointer",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+                    transition: "all 0.2s",
+                  }}>
+                    <div style={{ fontSize: 44 }}>{opt.emoji}</div>
+                    <div style={{ fontFamily: "'Fredoka One', cursive", color: "#fff", fontSize: 16 }}>
+                      {opt.label}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <MagicBtn onClick={() => setStep("name")} color="#555">← Back</MagicBtn>
+                <MagicBtn onClick={() => setStep("rooms")} disabled={!character}>
                   Next: Pick Your Rooms! →
                 </MagicBtn>
               </div>
@@ -836,7 +893,7 @@ function App() {
                 })}
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-                <MagicBtn onClick={() => setStep("name")} color="#555">← Back</MagicBtn>
+                <MagicBtn onClick={() => setStep("character")} color="#555">← Back</MagicBtn>
                 <MagicBtn onClick={() => setStep("power")} disabled={selectedRooms.length < 4}>
                   Next: Choose Your Power! →
                 </MagicBtn>
