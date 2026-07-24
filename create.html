@@ -463,18 +463,18 @@ function App() {
   // Build a simple print-ready PDF from the same content shown in the preview
   const ILLUSTRATION_FILES = {
     boy: {
-      door: "illustrations/door.jpg",
-      jungle: "illustrations/jungle.jpg",
-      undersea: "illustrations/sea.jpg",
-      carnival: "illustrations/carnival.jpg",
-      space: "illustrations/space.jpg",
-      kingdom: "illustrations/kingdom.jpg",
-      rainforest: "illustrations/rainforest.jpg",
-      lastpage: "illustrations/lastpage.jpg",
+      door: "door.jpeg",
+      jungle: "jungle.jpeg",
+      undersea: "sea.jpeg",
+      carnival: "carnival.jpeg",
+      space: "space.jpeg",
+      kingdom: "kingdom.jpeg",
+      rainforest: "rainforest.jpeg",
+      lastpage: "lastpage.jpeg",
     },
     girl: {
-      door: "illustrations/girl-door.jpg",
-      jungle: "illustrations/girl-jungle.jpg",
+      door: "girl-door.jpeg",
+      jungle: "girl-jungle.jpeg",
       // remaining worlds not yet illustrated for the girl character —
       // automatically falls back to the boy version below rather than
       // showing a blank color block
@@ -551,8 +551,8 @@ function App() {
         doc.setFillColor(...hexToRgb(page.room.color));
         doc.rect(0, 0, 420, 420, "F");
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(48);
-        doc.text(page.room.emoji || "*", 210, 220, { align: "center" });
+        doc.setFontSize(26);
+        doc.text(page.room.label || "A Magical World", 210, 220, { align: "center", maxWidth: 340 });
       }
 
       // Beat 2: the main story moment
