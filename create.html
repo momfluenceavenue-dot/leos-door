@@ -605,16 +605,18 @@ function App() {
     // A personalized closing sequence — real, meaningful pages instead of
     // blank filler, cycling through if more pages are still needed to reach
     // this Gelato product's required page count.
+    // One unique "Leo's Tip" page per world the child actually picked —
+    // real, distinct content instead of relying on generic repeats
+    for (const page of bookPreview) {
+      drawTextPage(doc, `Leo's Tip: ${page.room.label}`, page.tip);
+    }
+
+    const worldList = bookPreview.map(p => p.room.label).join(", ");
     const closingPages = [
       () => drawTextPage(
         doc,
         "Certificate of Imagination",
         `This certifies that ${name} is officially brave, kind, and full of magic.\n\nAwarded for adventuring through ${bookPreview.length} whole worlds without ever losing their sense of wonder.`
-      ),
-      () => drawTextPage(
-        doc,
-        "Leo's Tip",
-        bookPreview.length ? bookPreview[bookPreview.length - 1].tip : `Keep imagining, ${name}.`
       ),
       () => drawTextPage(
         doc,
@@ -625,6 +627,21 @@ function App() {
         doc,
         "About Leo's Door",
         `Leo's Door was written for every child whose imagination is bigger than any room they're in.\n\nYou are brave. You are powerful. You are free.`
+      ),
+      () => drawTextPage(
+        doc,
+        "The Journey So Far",
+        `${name} visited: ${worldList}.\n\nEvery single one is still there, waiting, any time ${name} wants to go back.`
+      ),
+      () => drawTextPage(
+        doc,
+        "A Note to the Grown-Ups",
+        `Thank you for giving ${name} a story where they're the hero. Imagination isn't a distraction from real life — it's practice for being brave, kind, and curious in it.`
+      ),
+      () => drawTextPage(
+        doc,
+        "Sweet Dreams",
+        `Close your eyes, ${name}. Somewhere out there, your door is still glowing gold, waiting for tomorrow's adventure.`
       ),
     ];
 
@@ -892,7 +909,7 @@ function App() {
                   Pick Your Magical Rooms!
                 </h2>
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, margin: 0 }}>
-                  Choose <strong style={{ color: "#D4A017" }}>4-6 worlds</strong> for your book — {selectedRooms.length}/6 chosen
+                  Choose <strong style={{ color: "#D4A017" }}>5-6 worlds</strong> for your book — {selectedRooms.length}/6 chosen
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginBottom: 24 }}>
@@ -917,7 +934,7 @@ function App() {
               </div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
                 <MagicBtn onClick={() => setStep("character")} color="#555">← Back</MagicBtn>
-                <MagicBtn onClick={() => setStep("power")} disabled={selectedRooms.length < 4}>
+                <MagicBtn onClick={() => setStep("power")} disabled={selectedRooms.length < 5}>
                   Next: Choose Your Power! →
                 </MagicBtn>
               </div>
