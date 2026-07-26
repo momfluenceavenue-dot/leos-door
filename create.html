@@ -624,16 +624,6 @@ function App() {
     doc.setFontSize(14);
     shadowText("LEO'S DOOR", 306, 250, [230, 220, 200], { align: "center" });
 
-    doc.setFont("times", "italic");
-    doc.setFontSize(16);
-    const openingEpigraph = doc.splitTextToSize(
-      `${name} had a door. It wasn't just any door, it was ${name}'s door. And every time ${name} opened it, a new adventure began.`,
-      420
-    );
-    openingEpigraph.forEach((line, i) => {
-      shadowText(line, 306, 320 + i * 24, [255, 240, 210], { align: "center", strokeWidth: 1 });
-    });
-
     // A dedicated page giving the door itself real story weight, not just
     // decoration on the title page — sets up the whole premise properly
     // before the chosen worlds begin.
