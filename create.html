@@ -108,20 +108,23 @@ const inputStyle = {
 };
 
 const ROOMS = [
-  { id: "jungle", label: "Jungle Kingdom", emoji: "🐒", color: "#1B6B3A", desc: "Leap through the treetops with tigers." },
-  { id: "undersea", label: "Under the Sea", emoji: "🐠", color: "#1A5276", desc: "Command the waves and swim with fish." },
-  { id: "carnival", label: "Magical Carnival", emoji: "🎡", color: "#C0392B", desc: "Slides, cotton candy, and a ringmaster." },
-  { id: "space", label: "Outer Space", emoji: "🚀", color: "#0D0D2B", desc: "Rocket through the galaxy past planets." },
-  { id: "kingdom", label: "Magic Kingdom", emoji: "🏰", color: "#6C3483", desc: "Knights, dragons, and glowing smoke." },
-  { id: "rainforest", label: "Rainforest", emoji: "🦋", color: "#2E7D32", desc: "Butterflies land on your fingers." },
-  { id: "princess", label: "Princess Palace", emoji: "👑", color: "#C2185B", desc: "Towers of rose and starlit crowns." },
-  { id: "candy", label: "Candy Wonderland", emoji: "🍭", color: "#7B1FA2", desc: "Clouds made of cotton candy." },
-  { id: "toys", label: "Land of Living Toys", emoji: "🧸", color: "#E65100", desc: "Every toy comes alive." },
-  { id: "japan", label: "Japan", emoji: "🎏", color: "#B71C1C", desc: "Cherry blossoms and red lanterns." },
-  { id: "paris", label: "Paris, France", emoji: "🗼", color: "#1A237E", desc: "The sparkling Eiffel Tower winks at you." },
-  { id: "africa", label: "African Savanna", emoji: "🦁", color: "#E65100", desc: "Lions, elephants, and golden grass." },
-  { id: "india", label: "India", emoji: "🎆", color: "#880E4F", desc: "Color, fireworks, and a baby elephant." },
-  { id: "brazil", label: "Amazon, Brazil", emoji: "🦜", color: "#1B5E20", desc: "Pink dolphins and a rainbow-beaked toucan." },
+  { id: "jungle", label: "Jungle Kingdom", emoji: "🐒", color: "#1B6B3A", desc: "Leap through the treetops with tigers.", active: true },
+  { id: "undersea", label: "Under the Sea", emoji: "🐠", color: "#1A5276", desc: "Command the waves and swim with fish.", active: true },
+  { id: "carnival", label: "Magical Carnival", emoji: "🎡", color: "#C0392B", desc: "Slides, cotton candy, and a ringmaster.", active: true },
+  { id: "space", label: "Outer Space", emoji: "🚀", color: "#0D0D2B", desc: "Rocket through the galaxy past planets.", active: true },
+  { id: "kingdom", label: "Magic Kingdom", emoji: "🏰", color: "#6C3483", desc: "Knights, dragons, and glowing smoke.", active: true },
+  { id: "rainforest", label: "Rainforest", emoji: "🦋", color: "#2E7D32", desc: "Butterflies land on your fingers.", active: true },
+  // The following worlds aren't shown to customers yet — no illustrations
+  // exist for them. Flip active to true once each one is fully illustrated
+  // (for both boy and girl) to bring it back into the selectable list.
+  { id: "princess", label: "Princess Palace", emoji: "👑", color: "#C2185B", desc: "Towers of rose and starlit crowns.", active: false },
+  { id: "candy", label: "Candy Wonderland", emoji: "🍭", color: "#7B1FA2", desc: "Clouds made of cotton candy.", active: false },
+  { id: "toys", label: "Land of Living Toys", emoji: "🧸", color: "#E65100", desc: "Every toy comes alive.", active: false },
+  { id: "japan", label: "Japan", emoji: "🎏", color: "#B71C1C", desc: "Cherry blossoms and red lanterns.", active: false },
+  { id: "paris", label: "Paris, France", emoji: "🗼", color: "#1A237E", desc: "The sparkling Eiffel Tower winks at you.", active: false },
+  { id: "africa", label: "African Savanna", emoji: "🦁", color: "#E65100", desc: "Lions, elephants, and golden grass.", active: false },
+  { id: "india", label: "India", emoji: "🎆", color: "#880E4F", desc: "Color, fireworks, and a baby elephant.", active: false },
+  { id: "brazil", label: "Amazon, Brazil", emoji: "🦜", color: "#1B5E20", desc: "Pink dolphins and a rainbow-beaked toucan.", active: false },
 ];
 
 const POWERS = [
@@ -921,7 +924,7 @@ function App() {
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10, marginBottom: 24 }}>
-                {ROOMS.map(room => {
+                {ROOMS.filter(room => room.active).map(room => {
                   const sel = selectedRooms.includes(room.id);
                   const maxed = selectedRooms.length >= 6 && !sel;
                   return (
