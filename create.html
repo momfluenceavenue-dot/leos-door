@@ -651,7 +651,11 @@ function App() {
 
     // This specific Gelato product requires an EVEN page count within its
     // 30-200 range — 34 is confirmed valid for this product.
-    const GELATO_REQUIRED_PAGES = 34;
+    // Gelato has explicitly confirmed this product requires EXACTLY 37 pages
+    // Confirmed directly from Gelato's own product API: validPageCounts for
+    // this product are even numbers 28, 30, 32...200. Using 28 (the minimum)
+    // keeps the book as close to its natural length as possible.
+    const GELATO_REQUIRED_PAGES = 28;
     let closingIndex = 0;
     while (doc.internal.getNumberOfPages() < GELATO_REQUIRED_PAGES) {
       closingPages[closingIndex % closingPages.length]();
