@@ -176,15 +176,28 @@ const ROOM_TEXT_2 = {
   brazil: (n) => `The toucan flies ${n} high above the treetops, past pink dolphins leaping in the river below, all the way to a hidden waterfall glowing gold in the sun.`,
 };
 
+// A short poetic lead-in line for each world, matching the framing used in
+// the printed KDP book — sits above the main story text.
+const ROOM_EPIGRAPH = {
+  jungle: "Behind it was a jungle full of talking animals, hidden paths, and big adventures.",
+  undersea: "Another time, it opened to the ocean, where waves whispered secrets and seashells sang songs.",
+  carnival: "Sometimes it led to places full of joy and laughter... like a carnival that never ended!",
+  space: "Other times, it blasted off to galaxies far, far away, where stars twinkled like diamonds and anything was possible.",
+  kingdom: "He visited magical castles, met brave knights, and even helped save the day.",
+  rainforest: "He discovered beautiful gardens where flowers glowed and wishes came true.",
+};
+
 // A short "Leo's Tip" reflection line for each world, giving kids something
-// to think about or talk about after each adventure.
+// to think about or talk about after each adventure. The 6 active worlds
+// are written as real visualization practice — inviting the child to
+// actively picture something themselves, not just read about Leo doing it.
 const ROOM_TIP = {
-  jungle: (n) => `Leo's Tip: Being brave doesn't mean you're never scared — it means you leap anyway, ${n}.`,
-  undersea: (n) => `Leo's Tip: The ocean is big, but so is your imagination, ${n}. What will you build next?`,
-  carnival: (n) => `Leo's Tip: It's okay to laugh as loud as you want, ${n}. Joy is meant to be shared.`,
-  space: (n) => `Leo's Tip: Even the biggest galaxy has room for someone as brave as you, ${n}.`,
-  kingdom: (n) => `Leo's Tip: A true hero is kind first, and brave second, ${n}.`,
-  rainforest: (n) => `Leo's Tip: Slow down sometimes, ${n} — the quietest moments are often the most magical.`,
+  jungle: (n) => `Close your eyes, ${n}. Can you feel the warm jungle air and hear the parrots calling? That's your imagination at work — the more you practice seeing pictures in your mind, the stronger it gets.`,
+  undersea: (n) => `Try it yourself, ${n}: picture the color of the water, the fish swimming by. When you imagine clearly like that, you're practicing a real skill called visualization.`,
+  carnival: (n) => `What ride would YOU build if you could imagine anything, ${n}? There's no wrong answer — your imagination gets to decide.`,
+  space: (n) => `Close your eyes and picture your very own planet, ${n}. What color is it? Who lives there? You just visualized something brand new.`,
+  kingdom: (n) => `Imagine your own castle, ${n}. What does it look like from far away? Practicing pictures like this in your mind makes your imagination stronger every time.`,
+  rainforest: (n) => `Take a slow breath and picture the flowers around you, ${n}. Noticing small details in your imagination is a skill you can use anywhere, anytime.`,
   princess: (n) => `Leo's Tip: You don't need a crown to be worthy of one, ${n}. You already are.`,
   candy: (n) => `Leo's Tip: Sweetness looks good on you, ${n} — inside and out.`,
   toys: (n) => `Leo's Tip: Every toy (and every person) has a story worth listening to, ${n}.`,
@@ -539,20 +552,31 @@ function App() {
     });
   };
 
-  const drawTextPage = (doc, title, bodyText) => {
+  const drawTextPage = (doc, title, bodyText, epigraph = null) => {
     doc.addPage([612, 612]);
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, 612, 612, "F");
     doc.setTextColor(40, 30, 20);
+    let y = 90;
     if (title) {
       doc.setFont("times", "bold");
       doc.setFontSize(26);
-      doc.text(title, 306, 90, { align: "center" });
+      doc.text(title, 306, y, { align: "center" });
+      y += 40;
+    }
+    if (epigraph) {
+      doc.setFont("times", "italic");
+      doc.setFontSize(15);
+      doc.setTextColor(150, 110, 30);
+      const epiLines = doc.splitTextToSize(epigraph, 460);
+      doc.text(epiLines, 306, y, { align: "center" });
+      y += epiLines.length * 20 + 20;
+      doc.setTextColor(40, 30, 20);
     }
     doc.setFont("times", "normal");
     doc.setFontSize(19);
     const lines = doc.splitTextToSize(bodyText, 480);
-    doc.text(lines, 306, title ? 170 : 280, { align: "center" });
+    doc.text(lines, 306, title ? y : 280, { align: "center" });
   };
 
   const generateBookPdf = async () => {
@@ -600,6 +624,25 @@ function App() {
     doc.setFontSize(14);
     shadowText("LEO'S DOOR", 306, 250, [230, 220, 200], { align: "center" });
 
+    doc.setFont("times", "italic");
+    doc.setFontSize(16);
+    const openingEpigraph = doc.splitTextToSize(
+      `${name} had a door. It wasn't just any door, it was ${name}'s door. And every time ${name} opened it, a new adventure began.`,
+      420
+    );
+    openingEpigraph.forEach((line, i) => {
+      shadowText(line, 306, 320 + i * 24, [255, 240, 210], { align: "center", strokeWidth: 1 });
+    });
+
+    // A dedicated page giving the door itself real story weight, not just
+    // decoration on the title page — sets up the whole premise properly
+    // before the chosen worlds begin.
+    drawTextPage(
+      doc,
+      `${name}'s Secret`,
+      `${name} had a door.\nRight past the bed, past the window full of sky, it stood there... glowing.\n\nNobody else knew ${name}'s secret:\nwhen ${name} closed their eyes and imagined, the door would open.\n\nEvery single time, a brand new adventure was waiting on the other side.\n\nGo ahead, ${name}. Open the door.\nYou never know where you'll end up! 🌟`
+    );
+
     for (const page of bookPreview) {
       // Beat 1: arrival — real illustration first, so the art leads each world
       doc.addPage([612, 612]);
@@ -621,7 +664,7 @@ function App() {
       }
 
       // Beat 2: the main story moment
-      drawTextPage(doc, page.room.label, page.text);
+      drawTextPage(doc, page.room.label, page.text, page.epigraph);
 
       // Beat 3: the continuing scene — gives every world a fuller arc
       drawTextPage(doc, null, page.text2);
@@ -643,6 +686,14 @@ function App() {
       doc.setFontSize(30);
       doc.text("The End", 306, 306, { align: "center" });
     }
+
+    // Closing text page — the ending epigraph, echoing the title page framing
+    drawTextPage(
+      doc,
+      `${name}'s Secret`,
+      `Every time someone opens ${name}'s door...\nthey never know what they'll find.\nBecause ${name} carries the biggest magic of all,\nright inside their imagination.\n\nNow close your eyes.\nWhat does YOUR room become?`,
+      `But no matter where ${name}'s Door took them, they always came back home, because the magic was always inside them. And tomorrow, they would open it again.`
+    );
 
     // A personalized closing sequence — real, meaningful pages instead of
     // blank filler, cycling through if more pages are still needed to reach
@@ -869,6 +920,7 @@ function App() {
   const selectedPowerData = POWERS.find(p => p.id === power);
   const bookPreview = selectedRoomData.map((room, i) => ({
     room,
+    epigraph: ROOM_EPIGRAPH[room.id] || null,
     text: (ROOM_TEXT[room.id] ? ROOM_TEXT[room.id](name) : `${name} discovers something magical here!`),
     text2: (ROOM_TEXT_2[room.id] ? ROOM_TEXT_2[room.id](name) : `${name} never wants this moment to end.`),
     tip: (ROOM_TIP[room.id] ? ROOM_TIP[room.id](name) : `Leo's Tip: Keep imagining, ${name}.`),
