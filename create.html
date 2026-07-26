@@ -689,13 +689,11 @@ function App() {
 
     // This specific Gelato product requires an EVEN page count within its
     // 30-200 range — 34 is confirmed valid for this product.
-    // Gelato has explicitly confirmed this product requires EXACTLY 37 pages
-    // Confirmed directly from Gelato's own product API: validPageCounts for
-    // this product are even numbers 28, 30, 32...200. Using 28 (the minimum)
-    // keeps the book as close to its natural length as possible.
-    const GELATO_REQUIRED_PAGES = 28;
+    // Lulu confirmed hardcover minimum is 24 interior pages. We target 30 to
+    // match the exact cover dimensions already confirmed via their API.
+    const LULU_TARGET_PAGES = 30;
     let closingIndex = 0;
-    while (doc.internal.getNumberOfPages() < GELATO_REQUIRED_PAGES) {
+    while (doc.internal.getNumberOfPages() < LULU_TARGET_PAGES) {
       closingPages[closingIndex % closingPages.length]();
       closingIndex++;
     }
@@ -715,10 +713,12 @@ function App() {
   // 6mm spine — confirmed via Gelato's own product API).
   const generateCoverPdf = async (pageCount) => {
     const { jsPDF } = window.jspdf;
-    const MM_TO_PT = 2.834645669;
-    const totalW = 458 * MM_TO_PT;
-    const totalH = 246 * MM_TO_PT;
-    const spineW = 6 * MM_TO_PT;
+    // Exact dimensions confirmed directly via Lulu's own cover-dimensions
+    // API for this pod_package_id at 30 interior pages — not estimated.
+    const totalW = 1368;
+    const totalH = 738;
+    const spineW = 24; // visual estimate for the design; Lulu's own file
+                        // processing handles the precise technical spine/wrap
     const panelW = (totalW - spineW) / 2;
 
     const doc = new jsPDF({ unit: "pt", format: [totalW, totalH] });
@@ -835,7 +835,7 @@ function App() {
       if (!coverUploadData.pdfUrl) throw new Error(coverUploadData.error || "Cover upload failed.");
 
       // 3. Submit the order to Gelato
-      const orderRes = await fetch(`${CONFIG.BACKEND_URL}/submit-gelato-order`, {
+      const orderRes = await fetch(`${CONFIG.BACKEND_URL}/submit-lulu-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
