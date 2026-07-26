@@ -505,6 +505,40 @@ function App() {
     });
   };
 
+  // Crops a (data URL) image to exactly match a target aspect ratio, centered,
+  // so it fills a panel cleanly without ever stretching or distorting.
+  const cropImageToAspect = (dataUrl, targetW, targetH) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const targetRatio = targetW / targetH;
+        const srcRatio = img.width / img.height;
+        let sx, sy, sw, sh;
+        if (srcRatio > targetRatio) {
+          // source is wider than needed — crop the sides
+          sh = img.height;
+          sw = sh * targetRatio;
+          sy = 0;
+          sx = (img.width - sw) / 2;
+        } else {
+          // source is taller than needed — crop top/bottom
+          sw = img.width;
+          sh = sw / targetRatio;
+          sx = 0;
+          sy = (img.height - sh) / 2;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(targetW);
+        canvas.height = Math.round(targetH);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  };
+
   const drawTextPage = (doc, title, bodyText) => {
     doc.addPage([420, 420]);
     doc.setFillColor(255, 255, 255);
@@ -534,12 +568,16 @@ function App() {
       doc.rect(0, 0, 420, 420, "F");
     }
 
-    // Helper: outlined text (fill + stroke) so it stays readable directly on
-    // top of the illustration without needing a dark background box
-    const outlinedText = (str, x, y, opts = {}) => {
-      doc.setLineWidth(opts.strokeWidth || 2.2);
-      doc.setDrawColor(...(opts.strokeColor || [20, 12, 6]));
-      doc.text(str, x, y, { ...opts, renderingMode: "fillThenStroke" });
+    // Helper: soft drop-shadow text so it stays readable directly on top of
+    // the illustration without a harsh outline — reads like real cover
+    // typography instead of a sticker/cartoon look
+    const shadowText = (str, x, y, fillColor, opts = {}) => {
+      doc.setTextColor(20, 12, 8);
+      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.4 }));
+      doc.text(str, x + 1.5, y + 1.5, opts);
+      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
+      doc.setTextColor(...fillColor);
+      doc.text(str, x, y, opts);
     };
 
     // A thin gold rule above the name, echoing the printed cover's line work
@@ -549,21 +587,18 @@ function App() {
 
     doc.setFont("times", "bold");
     doc.setFontSize(34);
-    doc.setTextColor(255, 210, 90);
-    outlinedText(`${name}'s Door`, 210, 105, { align: "center" });
+    shadowText(`${name}'s Door`, 210, 105, [255, 210, 90], { align: "center" });
 
     doc.setFont("times", "italic");
     doc.setFontSize(13);
-    doc.setTextColor(255, 255, 255);
-    outlinedText("A magical adventure starring " + name, 210, 132, { align: "center", strokeWidth: 1.4 });
+    shadowText("A magical adventure starring " + name, 210, 132, [255, 255, 255], { align: "center" });
 
     doc.setDrawColor(212, 160, 23);
     doc.setLineWidth(1);
     doc.line(150, 150, 270, 150);
     doc.setFont("times", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(230, 220, 200);
-    outlinedText("LEO'S DOOR", 210, 172, { align: "center", strokeWidth: 1.2 });
+    shadowText("LEO'S DOOR", 210, 172, [230, 220, 200], { align: "center" });
 
     for (const page of bookPreview) {
       // Beat 1: arrival — real illustration first, so the art leads each world
@@ -675,6 +710,68 @@ function App() {
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
   };
 
+  // Builds the actual printed cover (back + spine + front) as its own PDF,
+  // sized to this Gelato product's real cover dimensions (458mm x 246mm,
+  // 6mm spine — confirmed via Gelato's own product API).
+  const generateCoverPdf = async (pageCount) => {
+    const { jsPDF } = window.jspdf;
+    const MM_TO_PT = 2.834645669;
+    const totalW = 458 * MM_TO_PT;
+    const totalH = 246 * MM_TO_PT;
+    const spineW = 6 * MM_TO_PT;
+    const panelW = (totalW - spineW) / 2;
+
+    const doc = new jsPDF({ unit: "pt", format: [totalW, totalH] });
+
+    const shadowText = (str, x, y, fillColor, opts = {}) => {
+      doc.setTextColor(20, 12, 8);
+      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.4 }));
+      doc.text(str, x + 1.5, y + 1.5, opts);
+      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
+      doc.setTextColor(...fillColor);
+      doc.text(str, x, y, opts);
+    };
+
+    // BACK COVER (left panel)
+    doc.setFillColor(26, 10, 46);
+    doc.rect(0, 0, panelW, totalH, "F");
+    doc.setFont("times", "italic");
+    doc.setFontSize(15);
+    doc.setTextColor(230, 220, 245);
+    const blurb = doc.splitTextToSize(
+      `Every child has a door only they can open. Follow ${name} through worlds of jungles, oceans, castles, and stars in this one-of-a-kind personalized adventure.`,
+      panelW - 90
+    );
+    doc.text(blurb, panelW / 2, totalH / 2 - 30, { align: "center" });
+    doc.setFont("times", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(180, 165, 200);
+    doc.text("LEO'S DOOR", panelW / 2, totalH - 40, { align: "center" });
+
+    // SPINE (center strip)
+    doc.setFillColor(212, 160, 23);
+    doc.rect(panelW, 0, spineW, totalH, "F");
+
+    // FRONT COVER (right panel)
+    try {
+      const doorImg = await loadImageAsDataURL(getIllustrationPath(character, "door"));
+      const croppedDoorImg = await cropImageToAspect(doorImg, panelW, totalH);
+      doc.addImage(croppedDoorImg, "JPEG", panelW + spineW, 0, panelW, totalH);
+    } catch (e) {
+      doc.setFillColor(26, 10, 46);
+      doc.rect(panelW + spineW, 0, panelW, totalH, "F");
+    }
+    const fx = panelW + spineW + panelW / 2; // horizontal center of front panel
+    doc.setFont("times", "bold");
+    doc.setFontSize(30);
+    shadowText(`${name}'s Door`, fx, 90, [255, 210, 90], { align: "center" });
+    doc.setFont("times", "italic");
+    doc.setFontSize(12);
+    shadowText("A magical adventure starring " + name, fx, 116, [255, 255, 255], { align: "center" });
+
+    return doc.output("blob");
+  };
+
   const handlePay = async () => {
     setOrderStatus("processing");
     setOrderError("");
@@ -713,7 +810,7 @@ function App() {
         return;
       }
 
-      // 2. Generate the personalized book PDF
+      // 2. Generate the personalized interior book PDF
       const { blob: pdfBlob, pageCount } = await generateBookPdf();
       const formData = new FormData();
       formData.append("file", pdfBlob, `${name}-door.pdf`);
@@ -724,6 +821,18 @@ function App() {
       });
       const uploadData = await uploadRes.json();
       if (!uploadData.pdfUrl) throw new Error(uploadData.error || "PDF upload failed.");
+
+      // 2b. Generate and upload the actual printed cover (front + spine + back)
+      const coverBlob = await generateCoverPdf(pageCount);
+      const coverFormData = new FormData();
+      coverFormData.append("file", coverBlob, `${name}-door-cover.pdf`);
+
+      const coverUploadRes = await fetch(`${CONFIG.BACKEND_URL}/upload-pdf`, {
+        method: "POST",
+        body: coverFormData,
+      });
+      const coverUploadData = await coverUploadRes.json();
+      if (!coverUploadData.pdfUrl) throw new Error(coverUploadData.error || "Cover upload failed.");
 
       // 3. Submit the order to Gelato
       const orderRes = await fetch(`${CONFIG.BACKEND_URL}/submit-gelato-order`, {
@@ -737,6 +846,7 @@ function App() {
           rooms: selectedRooms,
           power: selectedPowerData ? selectedPowerData.label : "",
           pdfUrl: uploadData.pdfUrl,
+          coverUrl: coverUploadData.pdfUrl,
           pageCount: pageCount,
           shippingAddress: shipping,
         }),
