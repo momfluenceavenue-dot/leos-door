@@ -762,7 +762,7 @@ function App() {
                         // processing handles the precise technical spine/wrap
     const panelW = (totalW - spineW) / 2;
 
-    const doc = new jsPDF({ unit: "pt", format: [totalW, totalH] });
+    const doc = new jsPDF({ unit: "pt", format: [totalW, totalH], orientation: "landscape" });
 
     const shadowText = (str, x, y, fillColor, opts = {}) => {
       doc.setTextColor(20, 12, 8);
