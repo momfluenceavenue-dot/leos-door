@@ -762,55 +762,85 @@ function App() {
                         // processing handles the precise technical spine/wrap
     const panelW = (totalW - spineW) / 2;
 
-    const doc = new jsPDF({ unit: "pt", format: [totalW, totalH], orientation: "landscape" });
+    // Render everything onto an HTML canvas first, using the browser's real
+    // fonts. This becomes one flat image with no embedded-font requirement
+    // at all — sidesteps jsPDF's "fonts must be embedded" rejection
+    // entirely, since the text is just pixels, same as our illustrations.
+    const SCALE = 2; // supersample for crisp print-quality text
+    const canvas = document.createElement("canvas");
+    canvas.width = totalW * SCALE;
+    canvas.height = totalH * SCALE;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(SCALE, SCALE);
 
-    const shadowText = (str, x, y, fillColor, opts = {}) => {
-      doc.setTextColor(20, 12, 8);
-      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.4 }));
-      doc.text(str, x + 1.5, y + 1.5, opts);
-      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
-      doc.setTextColor(...fillColor);
-      doc.text(str, x, y, opts);
+    const drawShadowText = (str, x, y, fillStyle, font, align = "center") => {
+      ctx.font = font;
+      ctx.textAlign = align;
+      ctx.fillStyle = "rgba(20,12,8,0.4)";
+      ctx.fillText(str, x + 1.5, y + 1.5);
+      ctx.fillStyle = fillStyle;
+      ctx.fillText(str, x, y);
     };
 
     // BACK COVER (left panel)
-    doc.setFillColor(26, 10, 46);
-    doc.rect(0, 0, panelW, totalH, "F");
-    doc.setFont("times", "italic");
-    doc.setFontSize(15);
-    doc.setTextColor(230, 220, 245);
-    const blurb = doc.splitTextToSize(
-      `Every child has a door only they can open. Follow ${name} through worlds of jungles, oceans, castles, and stars in this one-of-a-kind personalized adventure.`,
-      panelW - 90
-    );
-    doc.text(blurb, panelW / 2, totalH / 2 - 30, { align: "center" });
-    doc.setFont("times", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(180, 165, 200);
-    doc.text("LEO'S DOOR", panelW / 2, totalH - 40, { align: "center" });
+    ctx.fillStyle = "rgb(26,10,46)";
+    ctx.fillRect(0, 0, panelW, totalH);
+    ctx.font = "italic 15px 'Times New Roman', serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgb(230,220,245)";
+    const blurbText = `Every child has a door only they can open. Follow ${name} through worlds of jungles, oceans, castles, and stars in this one-of-a-kind personalized adventure.`;
+    wrapCanvasText(ctx, blurbText, panelW / 2, totalH / 2 - 30, panelW - 90, 20);
+    ctx.font = "11px 'Times New Roman', serif";
+    ctx.fillStyle = "rgb(180,165,200)";
+    ctx.fillText("LEO'S DOOR", panelW / 2, totalH - 40);
 
     // SPINE (center strip)
-    doc.setFillColor(212, 160, 23);
-    doc.rect(panelW, 0, spineW, totalH, "F");
+    ctx.fillStyle = "rgb(212,160,23)";
+    ctx.fillRect(panelW, 0, spineW, totalH);
 
     // FRONT COVER (right panel)
     try {
       const doorImg = await loadImageAsDataURL(getIllustrationPath(character, "door"));
       const croppedDoorImg = await cropImageToAspect(doorImg, panelW, totalH);
-      doc.addImage(croppedDoorImg, "JPEG", panelW + spineW, 0, panelW, totalH);
+      const imgEl = await new Promise((resolve, reject) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = croppedDoorImg;
+      });
+      ctx.drawImage(imgEl, panelW + spineW, 0, panelW, totalH);
     } catch (e) {
-      doc.setFillColor(26, 10, 46);
-      doc.rect(panelW + spineW, 0, panelW, totalH, "F");
+      ctx.fillStyle = "rgb(26,10,46)";
+      ctx.fillRect(panelW + spineW, 0, panelW, totalH);
     }
-    const fx = panelW + spineW + panelW / 2; // horizontal center of front panel
-    doc.setFont("times", "bold");
-    doc.setFontSize(30);
-    shadowText(`${name}'s Door`, fx, 90, [255, 210, 90], { align: "center" });
-    doc.setFont("times", "italic");
-    doc.setFontSize(12);
-    shadowText("A magical adventure starring " + name, fx, 116, [255, 255, 255], { align: "center" });
+    const fx = panelW + spineW + panelW / 2;
+    drawShadowText(`${name}'s Door`, fx, 90, "rgb(255,210,90)", "bold 30px 'Times New Roman', serif");
+    drawShadowText("A magical adventure starring " + name, fx, 116, "rgb(255,255,255)", "italic 12px 'Times New Roman', serif");
+
+    const coverImageData = canvas.toDataURL("image/jpeg", 0.92);
+
+    const doc = new jsPDF({ unit: "pt", format: [totalW, totalH], orientation: "landscape" });
+    doc.addImage(coverImageData, "JPEG", 0, 0, totalW, totalH);
 
     return doc.output("blob");
+  };
+
+  // Simple word-wrap helper for canvas text (canvas has no built-in wrapping)
+  const wrapCanvasText = (ctx, text, x, y, maxWidth, lineHeight) => {
+    const words = text.split(" ");
+    let line = "";
+    let curY = y;
+    for (const word of words) {
+      const testLine = line ? line + " " + word : word;
+      if (ctx.measureText(testLine).width > maxWidth && line) {
+        ctx.fillText(line, x, curY);
+        line = word;
+        curY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) ctx.fillText(line, x, curY);
   };
 
   const handlePay = async () => {
