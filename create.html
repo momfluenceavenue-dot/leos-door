@@ -496,7 +496,8 @@ function App() {
       space: "girl-space.jpeg",
       kingdom: "girl-kingdom.jpeg",
       rainforest: "girl-rainforest.jpeg",
-      lastpage: "girl-lastpage.jpeg", // full girl set complete — 8 of 8 worlds
+      // lastpage: no real art yet — automatically falls back to the boy
+      // version below rather than showing a blank color block
     },
   };
 
@@ -551,77 +552,118 @@ function App() {
     });
   };
 
+  const wrapCanvasTextLines = (ctx, text, maxWidth) => {
+    const paragraphs = text.split("\n");
+    const allLines = [];
+    for (const para of paragraphs) {
+      if (para === "") { allLines.push(""); continue; }
+      const words = para.split(" ");
+      let line = "";
+      for (const word of words) {
+        const testLine = line ? line + " " + word : word;
+        if (ctx.measureText(testLine).width > maxWidth && line) {
+          allLines.push(line);
+          line = word;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) allLines.push(line);
+    }
+    return allLines;
+  };
+
   const drawTextPage = (doc, title, bodyText, epigraph = null) => {
-    doc.addPage([612, 612]);
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, 612, 612, "F");
-    doc.setTextColor(40, 30, 20);
+    // Render this page onto a canvas first (real browser fonts, rasterized)
+    // then embed as one image — avoids jsPDF's unembedded-font rejection.
+    const SCALE = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = 612 * SCALE;
+    canvas.height = 612 * SCALE;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(SCALE, SCALE);
+    ctx.fillStyle = "rgb(255,255,255)";
+    ctx.fillRect(0, 0, 612, 612);
+    ctx.textAlign = "center";
+
     let y = 90;
     if (title) {
-      doc.setFont("times", "bold");
-      doc.setFontSize(26);
-      doc.text(title, 306, y, { align: "center" });
+      ctx.font = "bold 26px 'Times New Roman', serif";
+      ctx.fillStyle = "rgb(40,30,20)";
+      ctx.fillText(title, 306, y);
       y += 40;
     }
     if (epigraph) {
-      doc.setFont("times", "italic");
-      doc.setFontSize(15);
-      doc.setTextColor(150, 110, 30);
-      const epiLines = doc.splitTextToSize(epigraph, 460);
-      doc.text(epiLines, 306, y, { align: "center" });
+      ctx.font = "italic 15px 'Times New Roman', serif";
+      ctx.fillStyle = "rgb(150,110,30)";
+      const epiLines = wrapCanvasTextLines(ctx, epigraph, 460);
+      epiLines.forEach((line, i) => ctx.fillText(line, 306, y + i * 20));
       y += epiLines.length * 20 + 20;
-      doc.setTextColor(40, 30, 20);
     }
-    doc.setFont("times", "normal");
-    doc.setFontSize(19);
-    const lines = doc.splitTextToSize(bodyText, 480);
-    doc.text(lines, 306, title ? y : 280, { align: "center" });
+    ctx.font = "19px 'Times New Roman', serif";
+    ctx.fillStyle = "rgb(40,30,20)";
+    const bodyLines = wrapCanvasTextLines(ctx, bodyText, 480);
+    const startY = title ? y : 280;
+    bodyLines.forEach((line, i) => ctx.fillText(line, 306, startY + i * 26));
+
+    doc.addPage([612, 612]);
+    doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, 612);
   };
 
   const generateBookPdf = async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: [612, 612] });
 
-    // Title page — real door illustration as the backdrop if available
+    // Title page — rendered on canvas (real fonts, rasterized) then
+    // embedded as one image, same approach as the cover, so there are no
+    // vector fonts anywhere that could trigger an "unembedded fonts" error.
+    const SCALE = 2;
+    const titleCanvas = document.createElement("canvas");
+    titleCanvas.width = 612 * SCALE;
+    titleCanvas.height = 612 * SCALE;
+    const tctx = titleCanvas.getContext("2d");
+    tctx.scale(SCALE, SCALE);
+
     try {
       const doorImg = await loadImageAsDataURL(getIllustrationPath(character, "door"));
-      doc.addImage(doorImg, "JPEG", 0, 0, 612, 612);
+      const imgEl = await new Promise((resolve, reject) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = doorImg;
+      });
+      tctx.drawImage(imgEl, 0, 0, 612, 612);
     } catch (e) {
-      doc.setFillColor(26, 10, 46);
-      doc.rect(0, 0, 612, 612, "F");
+      tctx.fillStyle = "rgb(26,10,46)";
+      tctx.fillRect(0, 0, 612, 612);
     }
 
-    // Helper: soft drop-shadow text so it stays readable directly on top of
-    // the illustration without a harsh outline — reads like real cover
-    // typography instead of a sticker/cartoon look
-    const shadowText = (str, x, y, fillColor, opts = {}) => {
-      doc.setTextColor(20, 12, 8);
-      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 0.4 }));
-      doc.text(str, x + 1.5, y + 1.5, opts);
-      if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
-      doc.setTextColor(...fillColor);
-      doc.text(str, x, y, opts);
+    const shadowText = (str, x, y, fillStyle, font) => {
+      tctx.font = font;
+      tctx.textAlign = "center";
+      tctx.fillStyle = "rgba(20,12,8,0.4)";
+      tctx.fillText(str, x + 1.5, y + 1.5);
+      tctx.fillStyle = fillStyle;
+      tctx.fillText(str, x, y);
     };
 
-    // A thin gold rule above the name, echoing the printed cover's line work
-    doc.setDrawColor(212, 160, 23);
-    doc.setLineWidth(1.5);
-    doc.line(218, 95, 394, 95);
+    tctx.strokeStyle = "rgb(212,160,23)";
+    tctx.lineWidth = 1.5;
+    tctx.beginPath();
+    tctx.moveTo(218, 95);
+    tctx.lineTo(394, 95);
+    tctx.stroke();
 
-    doc.setFont("times", "bold");
-    doc.setFontSize(48);
-    shadowText(`${name}'s Door`, 306, 153, [255, 210, 90], { align: "center" });
+    shadowText(`${name}'s Door`, 306, 153, "rgb(255,210,90)", "bold 48px 'Times New Roman', serif");
+    shadowText("A magical adventure starring " + name, 306, 192, "rgb(255,255,255)", "italic 18px 'Times New Roman', serif");
 
-    doc.setFont("times", "italic");
-    doc.setFontSize(18);
-    shadowText("A magical adventure starring " + name, 306, 192, [255, 255, 255], { align: "center" });
+    tctx.beginPath();
+    tctx.moveTo(218, 218);
+    tctx.lineTo(394, 218);
+    tctx.stroke();
+    shadowText("LEO'S DOOR", 306, 250, "rgb(230,220,200)", "14px 'Times New Roman', serif");
 
-    doc.setDrawColor(212, 160, 23);
-    doc.setLineWidth(1.5);
-    doc.line(218, 218, 394, 218);
-    doc.setFont("times", "normal");
-    doc.setFontSize(14);
-    shadowText("LEO'S DOOR", 306, 250, [230, 220, 200], { align: "center" });
+    doc.addImage(titleCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, 612);
 
     // A dedicated page giving the door itself real story weight, not just
     // decoration on the title page — sets up the whole premise properly
@@ -645,11 +687,19 @@ function App() {
         } catch (e) { hasArt = false; }
       }
       if (!hasArt) {
-        doc.setFillColor(...hexToRgb(page.room.color));
-        doc.rect(0, 0, 612, 612, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(36);
-        doc.text(page.room.label || "A Magical World", 306, 306, { align: "center", maxWidth: 500 });
+        const [r, g, b] = hexToRgb(page.room.color);
+        const fbCanvas = document.createElement("canvas");
+        fbCanvas.width = 612 * 2;
+        fbCanvas.height = 612 * 2;
+        const fctx = fbCanvas.getContext("2d");
+        fctx.scale(2, 2);
+        fctx.fillStyle = `rgb(${r},${g},${b})`;
+        fctx.fillRect(0, 0, 612, 612);
+        fctx.font = "36px 'Times New Roman', serif";
+        fctx.textAlign = "center";
+        fctx.fillStyle = "rgb(255,255,255)";
+        fctx.fillText(page.room.label || "A Magical World", 306, 306);
+        doc.addImage(fbCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, 612);
       }
 
       // Beat 2: the main story moment
@@ -669,11 +719,18 @@ function App() {
       const lastImg = await loadImageAsDataURL(getIllustrationPath(character, "lastpage"));
       doc.addImage(lastImg, "JPEG", 0, 0, 612, 612);
     } catch (e) {
-      doc.setFillColor(26, 10, 46);
-      doc.rect(0, 0, 612, 612, "F");
-      doc.setTextColor(212, 160, 23);
-      doc.setFontSize(30);
-      doc.text("The End", 306, 306, { align: "center" });
+      const endCanvas = document.createElement("canvas");
+      endCanvas.width = 612 * 2;
+      endCanvas.height = 612 * 2;
+      const ectx = endCanvas.getContext("2d");
+      ectx.scale(2, 2);
+      ectx.fillStyle = "rgb(26,10,46)";
+      ectx.fillRect(0, 0, 612, 612);
+      ectx.font = "30px 'Times New Roman', serif";
+      ectx.textAlign = "center";
+      ectx.fillStyle = "rgb(212,160,23)";
+      ectx.fillText("The End", 306, 306);
+      doc.addImage(endCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, 612);
     }
 
     // Closing text page — the ending epigraph, echoing the title page framing
