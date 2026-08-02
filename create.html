@@ -587,19 +587,19 @@ function App() {
 
     let y = 90;
     if (title) {
-      ctx.font = "bold 26px 'Times New Roman', serif";
+      ctx.font = "bold 26px 'Fredoka One', cursive";
       ctx.fillStyle = "rgb(40,30,20)";
       ctx.fillText(title, 306, y);
       y += 40;
     }
     if (epigraph) {
-      ctx.font = "italic 15px 'Times New Roman', serif";
+      ctx.font = "italic 15px 'Nunito', sans-serif";
       ctx.fillStyle = "rgb(150,110,30)";
       const epiLines = wrapCanvasTextLines(ctx, epigraph, 460);
       epiLines.forEach((line, i) => ctx.fillText(line, 306, y + i * 20));
       y += epiLines.length * 20 + 20;
     }
-    ctx.font = "19px 'Times New Roman', serif";
+    ctx.font = "19px 'Nunito', sans-serif";
     ctx.fillStyle = "rgb(40,30,20)";
     const bodyLines = wrapCanvasTextLines(ctx, bodyText, 480);
     const startY = title ? y : 280;
@@ -646,21 +646,22 @@ function App() {
       tctx.fillText(str, x, y);
     };
 
+    shadowText("Created by LEO'S DOOR", 306, 95, "rgb(230,220,200)", "14px 'Fredoka One', cursive");
+
     tctx.strokeStyle = "rgb(212,160,23)";
     tctx.lineWidth = 1.5;
     tctx.beginPath();
-    tctx.moveTo(218, 95);
-    tctx.lineTo(394, 95);
+    tctx.moveTo(218, 115);
+    tctx.lineTo(394, 115);
     tctx.stroke();
 
-    shadowText(`${name}'s Door`, 306, 153, "rgb(255,210,90)", "bold 48px 'Times New Roman', serif");
-    shadowText("A magical adventure starring " + name, 306, 192, "rgb(255,255,255)", "italic 18px 'Times New Roman', serif");
+    shadowText(`${name}'s Door`, 306, 173, "rgb(255,210,90)", "bold 48px 'Fredoka One', cursive");
+    shadowText("A magical adventure starring " + name, 306, 212, "rgb(255,255,255)", "italic 18px 'Nunito', sans-serif");
 
     tctx.beginPath();
-    tctx.moveTo(218, 218);
-    tctx.lineTo(394, 218);
+    tctx.moveTo(218, 238);
+    tctx.lineTo(394, 238);
     tctx.stroke();
-    shadowText("LEO'S DOOR", 306, 250, "rgb(230,220,200)", "14px 'Times New Roman', serif");
 
     doc.addImage(titleCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, 612);
 
@@ -694,7 +695,7 @@ function App() {
         fctx.scale(2, 2);
         fctx.fillStyle = `rgb(${r},${g},${b})`;
         fctx.fillRect(0, 0, 612, 612);
-        fctx.font = "36px 'Times New Roman', serif";
+        fctx.font = "36px 'Fredoka One', cursive";
         fctx.textAlign = "center";
         fctx.fillStyle = "rgb(255,255,255)";
         fctx.fillText(page.room.label || "A Magical World", 306, 306);
@@ -725,7 +726,7 @@ function App() {
       ectx.scale(2, 2);
       ectx.fillStyle = "rgb(26,10,46)";
       ectx.fillRect(0, 0, 612, 612);
-      ectx.font = "30px 'Times New Roman', serif";
+      ectx.font = "30px 'Fredoka One', cursive";
       ectx.textAlign = "center";
       ectx.fillStyle = "rgb(212,160,23)";
       ectx.fillText("The End", 306, 306);
@@ -840,12 +841,12 @@ function App() {
     // BACK COVER (left panel)
     ctx.fillStyle = "rgb(26,10,46)";
     ctx.fillRect(0, 0, panelW, totalH);
-    ctx.font = "italic 15px 'Times New Roman', serif";
+    ctx.font = "italic 15px 'Nunito', sans-serif";
     ctx.textAlign = "center";
     ctx.fillStyle = "rgb(230,220,245)";
     const blurbText = `Every child has a door only they can open. Follow ${name} through worlds of jungles, oceans, castles, and stars in this one-of-a-kind personalized adventure.`;
     wrapCanvasText(ctx, blurbText, panelW / 2, totalH / 2 - 30, panelW - 90, 20);
-    ctx.font = "11px 'Times New Roman', serif";
+    ctx.font = "11px 'Nunito', sans-serif";
     ctx.fillStyle = "rgb(180,165,200)";
     ctx.fillText("LEO'S DOOR", panelW / 2, totalH - 40);
 
@@ -869,8 +870,9 @@ function App() {
       ctx.fillRect(panelW + spineW, 0, panelW, totalH);
     }
     const fx = panelW + spineW + panelW / 2;
-    drawShadowText(`${name}'s Door`, fx, 90, "rgb(255,210,90)", "bold 30px 'Times New Roman', serif");
-    drawShadowText("A magical adventure starring " + name, fx, 116, "rgb(255,255,255)", "italic 12px 'Times New Roman', serif");
+    drawShadowText("Created by LEO'S DOOR", fx, 62, "rgb(230,220,200)", "12px 'Fredoka One', cursive");
+    drawShadowText(`${name}'s Door`, fx, 100, "rgb(255,210,90)", "bold 30px 'Fredoka One', cursive");
+    drawShadowText("A magical adventure starring " + name, fx, 126, "rgb(255,255,255)", "italic 12px 'Nunito', sans-serif");
 
     const coverImageData = canvas.toDataURL("image/jpeg", 0.92);
 
